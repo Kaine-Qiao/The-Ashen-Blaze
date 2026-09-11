@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90e38eb5e52ec544d979d571bda0d4f1, type: 3}
+  m_Name: "\u9A91\u5175\u5854"
+  m_EditorClassIdentifier: 
+  displayName: "\u9A91\u5175\u5854"
+  buildingType: 1
+  gridWidth: 3
+  gridHeight: 3
+  buildCost:
+    gold: 90
+    ore: 0
+    wood: 50
+  maxHP: 200
+  unitType: 3
+  spawnInterval: 8
+  spawnCount: 1
+  foodCostPerSpawn: 4
+  startLevel: 1
