@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u77FF\u77F3\u5854"
   buildingType: 0
+  icon: {fileID: 21300000, guid: cec1cd845e4827a44ab9d7ac1acb215f, type: 3}
   gridWidth: 2
   gridHeight: 2
   buildCost:

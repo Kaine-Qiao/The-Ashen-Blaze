@@ -32,6 +32,9 @@ public class BuildingDataSO : ScriptableObject
     [Tooltip("建筑类型")]
     public BuildingType buildingType = BuildingType.ResourceTower;
 
+    [Tooltip("建筑显示图片（每个塔配自己的图）")]
+    public Sprite icon;
+
     [Header("占格大小")]
     [Tooltip("占几格宽（红警式，建筑有自己的大小）")]
     public int gridWidth = 1;

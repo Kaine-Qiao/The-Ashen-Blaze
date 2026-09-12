@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u9A91\u5175\u5854"
   buildingType: 1
+  icon: {fileID: 21300000, guid: 6faf3fb2ebb9c424188cdcc42476546e, type: 3}
   gridWidth: 3
   gridHeight: 3
   buildCost:
@@ -21,7 +22,7 @@ MonoBehaviour:
     ore: 0
     wood: 50
   maxHP: 200
-  unitType: 3
+  unitData: {fileID: 11400000, guid: a72d094526a8694439c0edabcda8895b, type: 2}
   spawnInterval: 8
   spawnCount: 1
   foodCostPerSpawn: 4

@@ -33,10 +33,26 @@ public static class BuildingDataCreator
         asset.gridWidth = 1;
         asset.gridHeight = 1;
         asset.buildCost = new ResourceCost { gold = 50, wood = 30 };
-        asset.unitType = UnitType.Infantry;
         asset.foodCostPerSpawn = 1;
 
         ProjectWindowUtil.CreateAsset(asset, "NewBarracks.asset");
+    }
+
+    // 创建防御塔数据资产
+    [MenuItem("The Ashen Blaze/创建数据资产/防御塔")]
+    public static void CreateDefenseTowerData()
+    {
+        var asset = ScriptableObject.CreateInstance<DefenseTowerDataSO>();
+        asset.displayName = "新防御塔";
+        asset.buildingType = BuildingType.DefenseTower;
+        asset.gridWidth = 1;
+        asset.gridHeight = 1;
+        asset.buildCost = new ResourceCost { gold = 40, wood = 30 };
+        asset.attackDamage = 15f;
+        asset.attackRange = 4f;
+        asset.attackInterval = 1.5f;
+
+        ProjectWindowUtil.CreateAsset(asset, "NewDefenseTower.asset");
     }
 
     // 创建小兵单位数据资产

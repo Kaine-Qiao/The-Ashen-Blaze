@@ -30,6 +30,9 @@ public class UnitDataSO : ScriptableObject
     [Tooltip("显示名称")]
     public string displayName = "步兵";
 
+    [Tooltip("小兵显示图片（每个兵种配自己的图）")]
+    public Sprite icon;
+
     [Header("基础属性")]
     [Tooltip("攻击力")]
     public float attack = 10f;

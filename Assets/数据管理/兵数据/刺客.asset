@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   unitType: 4
   displayName: "\u523A\u5BA2"
+  icon: {fileID: 21300000, guid: f4a30e6e07a71c842be23aebc8743c50, type: 3}
   attack: 20
   defense: 1
   moveSpeed: 4

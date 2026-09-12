@@ -5,8 +5,8 @@ using UnityEngine;
 public class BarracksDataSO : BuildingDataSO
 {
     [Header("出兵设置")]
-    [Tooltip("产出哪种小兵")]
-    public UnitType unitType = UnitType.Infantry;
+    [Tooltip("产出哪种小兵（在 Unit Data 槽里直接拖对应小兵数据资产）")]
+    public UnitDataSO unitData;
 
     [Tooltip("出兵间隔（秒）")]
     public float spawnInterval = 5f;

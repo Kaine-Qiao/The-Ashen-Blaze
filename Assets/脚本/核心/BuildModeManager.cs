@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 // 建造模式管理器（挂在场景中的空物体上）：
 // 1. 用数字键选塔（1=目录里第1种塔，2=第2种...）
@@ -32,6 +33,21 @@ public class BuildModeManager : MonoBehaviour
     private Vector2Int hoverCell;
     private bool isHoveringValid;
 
+    // UI 用：通过目录索引选中要建造的塔（和数字键 1/2/3... 一样的效果）
+    public void SelectBuilding(int index)
+    {
+        if (catalog == null || index < 0 || index >= catalog.towers.Count) return;
+        currentSelectedTower = catalog.towers[index];
+        Debug.Log($"[建造] 选中: {currentSelectedTower.displayName}");
+    }
+
+    // UI 用：取消建造（和 ESC 一样）
+    public void CancelBuild()
+    {
+        currentSelectedTower = null;
+        Debug.Log("[建造] 取消选中");
+    }
+
     private void Awake()
     {
         // 创建一个运行时预览物体——一个白色半透明方块
@@ -41,11 +57,15 @@ public class BuildModeManager : MonoBehaviour
 
         previewRenderer = previewGO.AddComponent<SpriteRenderer>();
         // Unity 自带的白色 Sprite
+        // pixelsPerUnit = 纹理宽度 → 保证 sprite 原始世界尺寸 = 1×1 单位
+        // 后面用 localScale 精确控制预览框大小 = 格子数 × cellSize
+        int texW = Texture2D.whiteTexture.width;
+        int texH = Texture2D.whiteTexture.height;
         previewRenderer.sprite = Sprite.Create(
             Texture2D.whiteTexture,
-            new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
+            new Rect(0, 0, texW, texH),
             new Vector2(0.5f, 0.5f),
-            1f);
+            (float)texW); // 让 sprite 世界尺寸 = 1×1 单位
         previewRenderer.sortingOrder = 100; // 让它在塔上面
         previewRenderer.enabled = false;
     }
@@ -71,6 +91,14 @@ public class BuildModeManager : MonoBehaviour
         {
             currentSelectedTower = null;
             Debug.Log("[建造] 退出建造模式");
+        }
+
+        // ==== F 键切换建造阵营（测试用：方便建敌方塔来测试战斗） ====
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            playerFaction = playerFaction == Faction.Player ? Faction.Enemy : Faction.Player;
+            currentSelectedTower = null;
+            Debug.Log($"[建造] 切换建造阵营为: {(playerFaction == Faction.Player ? "玩家(左)" : "敌方(右)")}");
         }
 
         // ==== 不在建造模式：隐藏预览并返回 ====
@@ -110,6 +138,12 @@ public class BuildModeManager : MonoBehaviour
         // ==== 左键放置 ====
         if (Input.GetMouseButtonDown(0))
         {
+            // 鼠标点在 UI 元素上（按钮/面板/文字）时忽略，避免点 UI 时误触场景建造
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                return;
+            }
+
             Building result = BuildingManager.Instance.TryPlaceBuilding(
                 currentSelectedTower, worldPos, playerFaction);
 
