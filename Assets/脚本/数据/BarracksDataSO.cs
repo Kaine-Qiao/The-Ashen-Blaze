@@ -21,4 +21,12 @@ public class BarracksDataSO : BuildingDataSO
     [Header("经验等级（初始）")]
     [Tooltip("兵种塔初始的经验等级，决定产出小兵的初始等级（以后经验系统会升级它）")]
     public int startLevel = 1;
+
+    [Header("三条升级路线（3 路线系统）")]
+    [Tooltip("路线 A（第一条主线）")]
+    public UpgradePathSO pathA;
+    [Tooltip("路线 B（第二条主线）")]
+    public UpgradePathSO pathB;
+    [Tooltip("路线 C（第三条主线）")]
+    public UpgradePathSO pathC;
 }

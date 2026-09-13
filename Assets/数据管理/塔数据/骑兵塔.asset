@@ -27,3 +27,6 @@ MonoBehaviour:
   spawnCount: 1
   foodCostPerSpawn: 4
   startLevel: 1
+  pathA: {fileID: 11400000, guid: 8d2a4270dc3fb264eaaa56fd11660b8c, type: 2}
+  pathB: {fileID: 11400000, guid: cc8930825e56b694e82f087932071702, type: 2}
+  pathC: {fileID: 11400000, guid: 1b5b6ffaaa27830409e5f21319254806, type: 2}

@@ -37,8 +37,15 @@ public class BuildModeManager : MonoBehaviour
     public void SelectBuilding(int index)
     {
         if (catalog == null || index < 0 || index >= catalog.towers.Count) return;
+        if (!IsUnlocked(catalog.towers[index])) return; // 未研究科技解锁的塔不能选
         currentSelectedTower = catalog.towers[index];
         Debug.Log($"[建造] 选中: {currentSelectedTower.displayName}");
+    }
+
+    // 该塔是否已解锁（没挂 TechManager 时全部解锁）
+    private bool IsUnlocked(BuildingDataSO tower)
+    {
+        return tower != null && (TechManager.Instance == null || TechManager.Instance.IsBuildingUnlocked(tower));
     }
 
     // UI 用：取消建造（和 ESC 一样）
@@ -80,6 +87,7 @@ public class BuildModeManager : MonoBehaviour
                 KeyCode key = KeyCode.Alpha1 + i;
                 if (Input.GetKeyDown(key))
                 {
+                    if (!IsUnlocked(catalog.towers[i])) continue; // 未解锁不能选
                     currentSelectedTower = catalog.towers[i];
                     Debug.Log($"[建造] 选中: {currentSelectedTower.displayName}");
                 }

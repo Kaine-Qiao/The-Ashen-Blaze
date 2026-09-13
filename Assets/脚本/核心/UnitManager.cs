@@ -27,7 +27,11 @@ public class UnitManager : MonoBehaviour
     }
 
     // 生成一个小兵并初始化，返回生成的 Unit；失败返回 null
-    public Unit SpawnUnit(UnitDataSO data, Faction faction, Vector3 position)
+    // spawnLevel：出生等级（默认 1，由兵种塔经验等级传入）
+    // pathBonus：兵种塔 3 路线加成（默认无）
+    // source：出生它的兵种塔（击杀敌人时塔获得部分经验）
+    public Unit SpawnUnit(UnitDataSO data, Faction faction, Vector3 position,
+        int spawnLevel = 1, PathLevelData pathBonus = default, Barracks source = null)
     {
         if (data == null)
         {
@@ -64,7 +68,7 @@ public class UnitManager : MonoBehaviour
 
         // 玩家兵往右（敌方半场），敌方兵往左（玩家半场）
         int dir = faction == Faction.Player ? 1 : -1;
-        unit.Initialize(data, faction, dir, statsScale);
+        unit.Initialize(data, faction, dir, statsScale, spawnLevel, pathBonus, source);
         return unit;
     }
 }

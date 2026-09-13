@@ -64,4 +64,59 @@ public static class BuildingDataCreator
 
         ProjectWindowUtil.CreateAsset(asset, "NewUnitData.asset");
     }
+
+    // 创建文化塔（箭阵塔）数据资产
+    [MenuItem("The Ashen Blaze/创建数据资产/文化塔")]
+    public static void CreateCultureTowerData()
+    {
+        var asset = ScriptableObject.CreateInstance<CultureTowerDataSO>();
+        asset.displayName = "箭阵塔";
+        asset.buildingType = BuildingType.CultureTower;
+        asset.gridWidth = 1;
+        asset.gridHeight = 1;
+        asset.buildCost = new ResourceCost { gold = 60, wood = 40 };
+        asset.attackDamage = 8f;
+        asset.attackRange = 5f;
+        asset.attackInterval = 2f;
+        asset.maxTargets = 6;
+
+        ProjectWindowUtil.CreateAsset(asset, "NewCultureTower.asset");
+    }
+
+    // 创建升级路线数据资产（兵种塔 3 路线系统用）
+    [MenuItem("The Ashen Blaze/创建数据资产/升级路线")]
+    public static void CreateUpgradePath()
+    {
+        var asset = ScriptableObject.CreateInstance<UpgradePathSO>();
+        asset.pathName = "新路线";
+        asset.levels = new PathLevelData[5];
+        // 默认：攻击路线，每级 +10% 攻击、+8% 血量、+4% 攻速
+        for (int i = 0; i < 5; i++)
+        {
+            asset.levels[i] = new PathLevelData
+            {
+                attackBonus = 0.10f * (i + 1),
+                hpBonus = 0.08f * (i + 1),
+                attackSpeedBonus = 0.04f * (i + 1),
+                description = "攻击强化路线"
+            };
+        }
+        asset.mergeBoost = 1.5f;
+
+        ProjectWindowUtil.CreateAsset(asset, "NewUpgradePath.asset");
+    }
+
+    // 创建科技研究数据资产（大本营科技树用）
+    [MenuItem("The Ashen Blaze/创建数据资产/科技研究")]
+    public static void CreateTechData()
+    {
+        var asset = ScriptableObject.CreateInstance<TechDataSO>();
+        asset.techName = "新科技";
+        asset.description = "研究后获得强化效果";
+        asset.cost = new ResourceCost { gold = 100, ore = 50, wood = 30 };
+        asset.effectType = TechEffectType.AttackBoost;
+        asset.effectValue = 0.1f;
+
+        ProjectWindowUtil.CreateAsset(asset, "NewTech.asset");
+    }
 }

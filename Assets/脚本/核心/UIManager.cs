@@ -20,8 +20,11 @@ public class UIManager : MonoBehaviour
     // 选中信息文字
     private Text selectInfoText;
 
-    // 建造按钮（用于高亮当前选中的塔）
+    // 建造按钮（用于高亮当前选中的塔 + 资源不足时禁用/变红）
     private Image[] buildButtonImages;
+    private Button[] buildButtons;
+    private Text[] buildButtonNameTexts;
+    private Text[] buildButtonCostTexts;
 
     // 结束画面
     private GameObject endPanel;
@@ -66,6 +69,7 @@ public class UIManager : MonoBehaviour
     {
         RefreshResourceText();
         RefreshSelectInfo();
+        RefreshAffordability();
     }
 
     // ==================== 创建 ====================
@@ -97,7 +101,7 @@ public class UIManager : MonoBehaviour
         // 半透明底条，贴在左上角；宽度交给 ContentSizeFitter 自动收缩到内容大小
         // X 偏移两个块的距离（2×(130+6)=272），让金币/矿石进入屏幕
         var bar = CreatePanel("ResourceBar", null, new Vector2(0f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 44f), new Vector2(288f, -16f), new Color(0f, 0f, 0f, 0.55f));
+            new Vector2(0f, 44f), new Vector2(288f, -28f), new Color(0f, 0f, 0f, 0.55f));
         var fitter = bar.gameObject.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
@@ -139,7 +143,7 @@ public class UIManager : MonoBehaviour
         return text;
     }
 
-    // 底部建造菜单：每个塔一个按钮
+    // 底部建造菜单：用 HorizontalLayoutGroup 自动排列，避免手动定位错位
     private void CreateBuildMenu()
     {
         if (buildMode == null || buildMode.catalog == null) return;
@@ -152,36 +156,64 @@ public class UIManager : MonoBehaviour
         }
 
         float btnSize = 110f;
-        float menuW = towers.Count * (btnSize + 8f) + 16f;
 
-        // 底部面板
+        // 底部面板：pivot 设为底边中心；Y 偏移 = 离屏幕底 12 像素
         var panel = CreatePanel("BuildMenu", null, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            new Vector2(menuW, btnSize + 8f), new Vector2(0f, 12f), new Color(0f, 0f, 0f, 0.55f));
+            new Vector2(0f, btnSize + 12f), new Vector2(0f, 12f), new Color(0f, 0f, 0f, 0.6f));
+        var panelRT = panel.rectTransform;
+        panelRT.pivot = new Vector2(0.5f, 0f);
+        // 宽度交给 ContentSizeFitter，让面板宽度自动包裹住所有按钮
+        var fitter = panel.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-        // 塔按钮
+        // HorizontalLayoutGroup：自动把按钮横排
+        var layout = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(12, 12, 6, 6);
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        // 塔按钮（每个固定尺寸 btnSize × btnSize，LayoutGroup 自动排）
         buildButtonImages = new Image[towers.Count];
+        buildButtons = new Button[towers.Count];
+        buildButtonNameTexts = new Text[towers.Count];
+        buildButtonCostTexts = new Text[towers.Count];
         for (int i = 0; i < towers.Count; i++)
         {
-            float x = 8f + i * (btnSize + 8f);
-            var btn = CreateBuildButton(panel.transform, towers[i], i, x, btnSize);
+            var btn = CreateBuildButton(panel.transform, towers[i], i, btnSize);
             buildButtonImages[i] = btn.GetComponent<Image>();
+            buildButtons[i] = btn;
         }
 
-        // 选中信息（当前选的塔 + 成本），放在建造菜单正上方（不重叠）
-        // 菜单面板高度 = btnSize + 8 ≈ 118，从 y=12 往上；信息放 y≈140~170
-        selectInfoText = CreateText("SelectInfo", null, "未选择建筑", 20, TextAnchor.MiddleCenter,
-            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-260f, 140f), new Vector2(260f, 170f));
+        // 选中信息：放在建造面板正上方（面板高度 ≈ btnSize+12 = 122）
+        // 用 Canvas 坐标系直接定位到面板上方约 10 像素处
+        // 但因为面板宽度会自适应，选中信息直接用中心锚点 + 合适的 Y 即可
+        selectInfoText = CreateText("SelectInfo", null, "未选择建筑（点下面的按钮选一个）", 18,
+            TextAnchor.MiddleCenter,
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            new Vector2(-300f, 140f), new Vector2(300f, 170f));
     }
 
-    // 创建一个塔按钮（图标 + 名字 + 成本）
-    private Button CreateBuildButton(Transform parent, BuildingDataSO tower, int index, float x, float size)
+    // 创建一个塔按钮（固定尺寸，由 LayoutGroup 负责定位）
+    private Button CreateBuildButton(Transform parent, BuildingDataSO tower, int index, float size)
     {
         var go = new GameObject(tower.displayName);
         go.transform.SetParent(parent, false);
+
         var rt = go.AddComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(x, -4f);
-        rt.sizeDelta = new Vector2(size, size - 8f);
+        rt.anchorMin = new Vector2(0f, 0.5f);
+        rt.anchorMax = new Vector2(0f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(size, size);
+
+        // 给 LayoutGroup 用的尺寸元素
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredWidth = size;
+        le.preferredHeight = size;
 
         var img = go.AddComponent<Image>();
         img.color = new Color(0.25f, 0.25f, 0.25f, 0.95f);
@@ -203,20 +235,22 @@ public class UIManager : MonoBehaviour
             iconImg.sprite = tower.icon;
             iconImg.preserveAspect = true;
             var iconRT = iconImg.rectTransform;
-            iconRT.anchorMin = new Vector2(0.08f, 0.32f);
-            iconRT.anchorMax = new Vector2(0.92f, 0.98f);
+            iconRT.anchorMin = new Vector2(0.08f, 0.35f);
+            iconRT.anchorMax = new Vector2(0.92f, 0.92f);
             iconRT.offsetMin = Vector2.zero;
             iconRT.offsetMax = Vector2.zero;
         }
 
-        // 塔名字（中间一行）
-        var nameText = CreateText("Name", go.transform, tower.displayName, 13, TextAnchor.MiddleCenter,
-            new Vector2(0f, 0.16f), new Vector2(1f, 0.32f), Vector2.zero, Vector2.zero);
+        // 塔名字
+        var nameText = CreateText("Name", go.transform, tower.displayName, 14, TextAnchor.MiddleCenter,
+            new Vector2(0f, 0.18f), new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
+        buildButtonNameTexts[index] = nameText;
 
         // 成本（底部小字）
         string costStr = FormatCost(tower.buildCost);
-        var costText = CreateText("Cost", go.transform, costStr, 11, TextAnchor.MiddleCenter,
-            new Vector2(0f, 0f), new Vector2(1f, 0.16f), Vector2.zero, Vector2.zero);
+        var costText = CreateText("Cost", go.transform, costStr, 12, TextAnchor.MiddleCenter,
+            new Vector2(0f, 0f), new Vector2(1f, 0.18f), Vector2.zero, Vector2.zero);
+        buildButtonCostTexts[index] = costText;
 
         return btn;
     }
@@ -247,6 +281,36 @@ public class UIManager : MonoBehaviour
             woodText.text = $"木材 {ResourceManager.Instance.GetResource(Faction.Player, ResourceType.Wood)}";
         if (foodText != null)
             foodText.text = $"干粮 {ResourceManager.Instance.GetResource(Faction.Player, ResourceType.Food)}";
+    }
+
+    // 每帧检查玩家资源是否足够建塔：不足 → 按钮禁用（不可点）+ 名字/成本变红
+    // 未研究科技解锁的塔：显示 🔒 并禁用
+    private void RefreshAffordability()
+    {
+        if (buildMode == null || buildMode.catalog == null || buildButtons == null) return;
+        if (ResourceManager.Instance == null) return;
+
+        var towers = buildMode.catalog.towers;
+        for (int i = 0; i < buildButtons.Length; i++)
+        {
+            if (i >= towers.Count) break;
+
+            bool unlocked = TechManager.Instance == null || TechManager.Instance.IsBuildingUnlocked(towers[i]);
+            bool afford = unlocked && ResourceManager.Instance.CanAffordCosts(Faction.Player, towers[i].buildCost.ToDictionary());
+
+            var btn = buildButtons[i];
+            if (btn != null) btn.interactable = afford;
+
+            if (buildButtonNameTexts[i] != null)
+            {
+                buildButtonNameTexts[i].color = !unlocked ? new Color(0.5f, 0.5f, 0.5f) : (afford ? Color.white : Color.red);
+            }
+            if (buildButtonCostTexts[i] != null)
+            {
+                buildButtonCostTexts[i].text = unlocked ? FormatCost(towers[i].buildCost) : "需研究解锁";
+                buildButtonCostTexts[i].color = afford ? new Color(1f, 0.85f, 0.5f) : Color.red;
+            }
+        }
     }
 
     // 刷新选中信息 + 按钮高亮

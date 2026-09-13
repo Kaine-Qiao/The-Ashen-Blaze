@@ -3,6 +3,7 @@ using UnityEngine;
 // 小兵组件：挂在每个小兵物体上（由兵种塔生成）
 // 行为：索敌范围内发现敌方目标→追向它，进入攻击范围→停下攻击；没有目标→朝敌方方向走
 // 视觉：脚下阵营圈（玩家蓝/敌方红），受击时盖一层红色光罩
+// 经验：击杀敌人获得经验升级（攻击/血量/防御/攻速提升）；出生等级由兵种塔的经验等级决定
 public class Unit : MonoBehaviour
 {
     [Header("数据")]
@@ -20,6 +21,24 @@ public class Unit : MonoBehaviour
     [Tooltip("受击后向后退的距离")]
     public float knockbackDistance = 0.15f;
 
+    [Header("经验等级")]
+    [Tooltip("当前等级（1 起；由出生兵种塔的经验等级决定）")]
+    public int level = 1;
+    [Tooltip("当前经验")]
+    public int exp = 0;
+    [Tooltip("升级所需基础经验（实际 = 基础 + 等级 × 增量）")]
+    public int expBase = 30;
+    [Tooltip("每级经验增量")]
+    public int expPerLevelInc = 20;
+    [Tooltip("每升一级攻击加成（0.1 = +10%）")]
+    public float levelAttackBonus = 0.1f;
+    [Tooltip("每升一级血量加成")]
+    public float levelHPBonus = 0.1f;
+    [Tooltip("每升一级防御加成")]
+    public float levelDefenseBonus = 0.1f;
+    [Tooltip("每升一级攻速加成")]
+    public float levelAttackSpeedBonus = 0.05f;
+
     [Header("当前状态")]
     [Tooltip("当前生命")]
     public float currentHP;
@@ -27,9 +46,23 @@ public class Unit : MonoBehaviour
     // 移动方向：+1 = 向右（玩家兵往敌方右半场走），-1 = 向左（敌方兵往玩家左半场走）
     [HideInInspector] public int moveDir = 1;
 
-    // 实际生效的移动速度 / 攻击范围（= 数据值 × statsScale，由 UnitManager 传入）
+    // 实际生效的移动速度 / 攻击范围（= 数据值 × statsScale × 路线加成，由生成方传入）
     private float moveSpeed;
     private float attackRange;
+
+    // 路线加成（兵种塔 3 路线系统提供）
+    private float pathAttackBonus;
+    private float pathDefenseBonus;
+    private float pathHPBonus;
+    private float pathSpeedBonus;
+    private float pathAttackSpeedBonus;
+    private float pathRangeBonus;
+
+    // 出生兵种塔（小兵击杀敌人时，塔也获得部分经验）
+    private Barracks sourceBarracks;
+
+    // 最后攻击自己的小兵（死亡时经验分配给他）
+    private Unit lastHitByUnit;
 
     // 当前攻击目标（没有目标则为 null，继续移动）
     private Transform target;
@@ -51,17 +84,31 @@ public class Unit : MonoBehaviour
 
     // 由生成方（兵种塔）调用，初始化数据、阵营、方向
     // statsScale：数值倍率（攻击范围/索敌/移速/击退一起缩放，与视觉缩小平match）
-    public void Initialize(UnitDataSO unitData, Faction owner, int direction, float statsScale = 1f)
+    // spawnLevel：出生等级（= 兵种塔经验等级）
+    // pathBonus：兵种塔路线加成（3 路线系统）
+    // source：出生它的兵种塔（击杀敌人时塔也获得经验）
+    public void Initialize(UnitDataSO unitData, Faction owner, int direction, float statsScale = 1f,
+        int spawnLevel = 1, PathLevelData pathBonus = default, Barracks source = null)
     {
         data = unitData;
         faction = owner;
         moveDir = direction;
-        currentHP = unitData != null ? unitData.maxHP : 100f;
+        level = Mathf.Max(1, spawnLevel);
+        sourceBarracks = source;
+        currentHP = GetMaxHP();
         name = unitData != null ? unitData.displayName : "Unit";
 
+        // 路线加成拆开保存
+        pathAttackBonus = pathBonus.attackBonus;
+        pathDefenseBonus = pathBonus.defenseBonus;
+        pathHPBonus = pathBonus.hpBonus;
+        pathSpeedBonus = pathBonus.speedBonus;
+        pathAttackSpeedBonus = pathBonus.attackSpeedBonus;
+        pathRangeBonus = pathBonus.rangeBonus;
+
         // 应用数值倍率（索敌范围 searchRange 不缩放，保持 Inspector 里的原值）
-        moveSpeed = (unitData != null ? unitData.moveSpeed : 3f) * statsScale;
-        attackRange = (unitData != null ? unitData.attackRange : 1.5f) * statsScale;
+        moveSpeed = (unitData != null ? unitData.moveSpeed : 3f) * statsScale * (1f + pathSpeedBonus);
+        attackRange = (unitData != null ? unitData.attackRange : 1.5f) * statsScale * (1f + pathRangeBonus);
         knockbackDistance *= statsScale;
 
         // 用该兵种配的专属图片（没有配就保持 prefab 默认图）
@@ -72,6 +119,65 @@ public class Unit : MonoBehaviour
         }
 
         CreateVisuals();
+    }
+
+    // 当前最大血量（含出生等级 + 路线血量加成）
+    public float GetMaxHP()
+    {
+        float hp = data != null ? data.maxHP : 100f;
+        hp *= 1f + levelHPBonus * (level - 1);          // 每级 +10%
+        hp *= 1f + pathHPBonus;                          // 路线加成
+        return hp;
+    }
+
+    // 当前攻击力（基础 + 等级成长 + 路线加成 + 玩家科技加成）
+    public float GetAttack()
+    {
+        float atk = data != null ? data.attack : 10f;
+        atk *= 1f + levelAttackBonus * (level - 1);
+        atk *= 1f + pathAttackBonus;
+        if (faction == Faction.Player && TechManager.Instance != null)
+            atk *= 1f + TechManager.Instance.GetAttackBonus();
+        return atk;
+    }
+
+    // 当前防御（基础 + 等级成长 + 路线加成 + 玩家科技加成）
+    public float GetDefense()
+    {
+        float def = data != null ? data.defense : 0f;
+        def += levelDefenseBonus * (level - 1);
+        def += pathDefenseBonus;
+        if (faction == Faction.Player && TechManager.Instance != null)
+            def += TechManager.Instance.GetDefenseBonus();
+        return def;
+    }
+
+    // 当前攻击间隔（基础攻速 + 等级成长 + 路线攻速加成）
+    private float GetAttackInterval()
+    {
+        float aspeed = data != null ? data.attackSpeed : 1f;
+        aspeed *= 1f + levelAttackSpeedBonus * (level - 1);
+        aspeed *= 1f + pathAttackSpeedBonus;
+        return 1f / Mathf.Max(0.01f, aspeed);
+    }
+
+    // 获得经验（击杀敌人时调用），经验满了升级
+    public void AddExp(int amount)
+    {
+        if (amount <= 0) return;
+        exp += amount;
+
+        int need = expBase + expPerLevelInc * (level - 1);
+        while (exp >= need)
+        {
+            exp -= need;
+            level++;
+            need = expBase + expPerLevelInc * (level - 1);
+            // 升级时回一部分血（等于本级的血量加成），不然升级白升
+            currentHP += data != null ? data.maxHP * levelHPBonus : 10f;
+            currentHP = Mathf.Min(currentHP, GetMaxHP());
+            Debug.Log($"[经验] {name}({faction}) 升到 {level} 级！攻击 {GetAttack():F1} 血量 {GetMaxHP():F0}");
+        }
     }
 
     // 创建脚下的阵营圈（前后两半，做出 3D 遮挡效果）+ 受击红色光罩
@@ -175,7 +281,7 @@ public class Unit : MonoBehaviour
                 attackTimer -= Time.deltaTime;
                 if (attackTimer <= 0f)
                 {
-                    attackTimer = 1f / Mathf.Max(0.01f, data.attackSpeed);
+                    attackTimer = GetAttackInterval();
                     AttackTarget(target);
                 }
             }
@@ -239,17 +345,17 @@ public class Unit : MonoBehaviour
         var unit = target.GetComponent<Unit>();
         if (unit != null)
         {
-            int dmg = Mathf.Max(1, (int)(data.attack - unit.data.defense));
+            int dmg = Mathf.Max(1, Mathf.RoundToInt(GetAttack() - unit.GetDefense()));
             // 受击方向：从攻击者指向目标
             Vector2 hitDir = ((Vector2)(unit.transform.position - transform.position)).normalized;
-            unit.TakeDamage(dmg, hitDir);
+            unit.TakeDamage(dmg, hitDir, this);
             return;
         }
 
         var building = target.GetComponent<Building>();
         if (building != null)
         {
-            building.TakeDamage(data.attack);
+            building.TakeDamage(GetAttack());
         }
     }
 
@@ -267,10 +373,18 @@ public class Unit : MonoBehaviour
 
     // 受到伤害（由攻击系统调用）
     // hitDir：攻击方向（从攻击者指向自己），用于击退
-    public void TakeDamage(float damage, Vector2 hitDir)
+    // attacker：攻击我的小兵（死亡时把经验给他；防御塔打的不给经验）
+    public void TakeDamage(float damage, Vector2 hitDir, Unit attacker = null)
     {
         if (damage <= 0) return;
-        currentHP -= damage;
+
+        // 玩家科技防御加成：减免伤害
+        float dmg = damage;
+        if (faction == Faction.Player && TechManager.Instance != null)
+            dmg *= Mathf.Max(0f, 1f - TechManager.Instance.GetDefenseBonus());
+
+        currentHP -= dmg;
+        lastHitByUnit = attacker;
 
         // 受击反馈：显示红色光罩 + 按受击方向后退一小步
         flashTimer = 0.12f;
@@ -279,8 +393,21 @@ public class Unit : MonoBehaviour
 
         if (currentHP <= 0f)
         {
-            // TODO: 以后在这里加死亡经验分配
-            Destroy(gameObject);
+            Die();
         }
+    }
+
+    // 死亡：把经验分配给击杀者（击杀者升级，击杀者出生塔也获得部分经验）
+    private void Die()
+    {
+        if (lastHitByUnit != null && data != null)
+        {
+            lastHitByUnit.AddExp(data.expProvided);
+            if (lastHitByUnit.sourceBarracks != null)
+            {
+                lastHitByUnit.sourceBarracks.AddExp(Mathf.Max(1, Mathf.RoundToInt(data.expProvided * 0.5f)));
+            }
+        }
+        Destroy(gameObject);
     }
 }

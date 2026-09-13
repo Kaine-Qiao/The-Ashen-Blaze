@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc07810331148f747b9a4ed0b0b79009, type: 3}
+  m_Name: "\u9632\u5FA1"
+  m_EditorClassIdentifier: 
+  pathName: "\u5347\u7EA7\u8DEF\u7EBF"
+  levels:
+  - attackBonus: 0
+    defenseBonus: 0
+    hpBonus: 0
+    speedBonus: 0
+    attackSpeedBonus: 0
+    rangeBonus: 0
+    description: 
+  - attackBonus: 0
+    defenseBonus: 0
+    hpBonus: 0
+    speedBonus: 0
+    attackSpeedBonus: 0
+    rangeBonus: 0
+    description: 
+  - attackBonus: 0
+    defenseBonus: 0
+    hpBonus: 0
+    speedBonus: 0
+    attackSpeedBonus: 0
+    rangeBonus: 0
+    description: 
+  - attackBonus: 0
+    defenseBonus: 0
+    hpBonus: 0
+    speedBonus: 0
+    attackSpeedBonus: 0
+    rangeBonus: 0
+    description: 
+  - attackBonus: 0
+    defenseBonus: 0
+    hpBonus: 0
+    speedBonus: 0
+    attackSpeedBonus: 0
+    rangeBonus: 0
+    description: 
+  mergeBoost: 1.5

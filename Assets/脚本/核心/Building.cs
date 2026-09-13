@@ -18,6 +18,18 @@ public class Building : MonoBehaviour
     [Tooltip("当前等级（升级系统用，初始 1）")]
     public int level = 1;
 
+    [Header("3 路线升级状态（仅兵种塔/防御塔用）")]
+    [Tooltip("主线路（-1=未选，0=A，1=B，2=C）")]
+    public int mainPath = -1;
+    [Tooltip("主线等级（0~5）")]
+    public int mainPathLevel = 0;
+    [Tooltip("分支路线（-1=未选，0=A，1=B，2=C）")]
+    public int branchPath = -1;
+    [Tooltip("分支等级（0~2）")]
+    public int branchPathLevel = 0;
+    [Tooltip("是否已合成 6 级（三主线都 5 级后合并）")]
+    public bool isMerged6 = false;
+
     [Header("基地标记")]
     [Tooltip("是否基地（大本营）。基地被摧毁时触发胜负判定")]
     public bool isBase = false;
@@ -81,6 +93,12 @@ public class Building : MonoBehaviour
                 if (dt == null) dt = gameObject.AddComponent<DefenseTower>();
                 dt.Initialize(defenseData, owner);
             }
+            else if (buildingData is CultureTowerDataSO cultureData)
+            {
+                var ct = gameObject.GetComponent<CultureTower>();
+                if (ct == null) ct = gameObject.AddComponent<CultureTower>();
+                ct.Initialize(cultureData, owner);
+            }
         }
     }
 
@@ -90,6 +108,66 @@ public class Building : MonoBehaviour
         if (damage <= 0) return;
         currentHP -= damage;
         if (currentHP <= 0f) DestroyBuilding();
+    }
+
+    // ===== 3 路线升级加成 =====
+    // 取该建筑配的 3 条路线（只有兵种塔有路线系统；其他类型返回 null）
+    public UpgradePathSO[] GetPaths()
+    {
+        if (data == null) return null;
+        if (data is BarracksDataSO b) return new UpgradePathSO[] { b.pathA, b.pathB, b.pathC };
+        return null;
+    }
+
+    // 累计当前主线 + 分支的总加成（6 级时主线全按 5 级算并乘 mergeBoost）
+    public PathLevelData GetTotalPathBonus()
+    {
+        var result = new PathLevelData();
+        var paths = GetPaths();
+        if (paths == null) return result;
+
+        if (isMerged6)
+        {
+            // 6 级：三条主线都按 5 级加成，并乘 mergeBoost 强化
+            for (int i = 0; i < 3; i++)
+            {
+                if (paths[i] == null || paths[i].levels.Length < 5) continue;
+                AddLevel(paths[i].levels[4], ref result, paths[i].mergeBoost);
+            }
+            return result;
+        }
+
+        // 普通：主线按 mainPathLevel 加成（1~5 级对应 levels[0~4]）
+        if (mainPath >= 0 && mainPath < 3 && paths[mainPath] != null)
+        {
+            int lv = Mathf.Clamp(mainPathLevel - 1, 0, 4);
+            if (paths[mainPath].levels.Length > lv)
+            {
+                AddLevel(paths[mainPath].levels[lv], ref result, 1f);
+            }
+        }
+
+        // 分支按 branchPathLevel 加成（分支 1~2 级对应 levels[0~1]，叠加生效）
+        if (branchPath >= 0 && branchPath < 3 && paths[branchPath] != null)
+        {
+            int lv = Mathf.Clamp(branchPathLevel - 1, 0, 1);
+            if (paths[branchPath].levels.Length > lv)
+            {
+                AddLevel(paths[branchPath].levels[lv], ref result, 1f);
+            }
+        }
+
+        return result;
+    }
+
+    private static void AddLevel(PathLevelData level, ref PathLevelData acc, float boost)
+    {
+        acc.attackBonus += level.attackBonus * boost;
+        acc.defenseBonus += level.defenseBonus * boost;
+        acc.hpBonus += level.hpBonus * boost;
+        acc.speedBonus += level.speedBonus * boost;
+        acc.attackSpeedBonus += level.attackSpeedBonus * boost;
+        acc.rangeBonus += level.rangeBonus * boost;
     }
 
     // 建筑被摧毁：释放网格占用并销毁物体
